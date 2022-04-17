@@ -67,7 +67,9 @@ LD = $(TOOLPREFIX)ld
 OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
 
-CFLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb
+#-g3-gdwarf-2
+#CFLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb
+CFLAGS = -Wall -Werror -fno-omit-frame-pointer -g3 -gdwarf-2
 
 ifdef LAB
 LABUPPER = $(shell echo $(LAB) | tr a-z A-Z)
@@ -306,5 +308,6 @@ myapi.key:
 		false; \
 	fi;
 
-
+gdb:
+	riscv64-unknown-elf-gdb kernel/kernel
 .PHONY: handin tarball tarball-pref clean grade handin-check
