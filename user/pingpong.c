@@ -2,40 +2,59 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 
-#define STDIN_FILE_NO 0
-#define STDOUT_FILE_NO 1
-#define STDERR_FILE_NO 2
-
-#define PIPE_READ 0
-#define PIPE_WRITE 1
+#define Pread 0
+#define Pwrite 1
 
 int main(int argv, int **argc) {
-    int p2c[2];
-    int c2p[2];
-    if (pipe(p2c) < 0 || pipe(c2p) < 0) {
-        fprintf(STDERR_FILE_NO, "pipe err.\n");
-    }
-    int res = fork();
-    int number = 6;
-    if (res < 0) {
-        fprintf(STDERR_FILE_NO, "fork error.\n");
+    int parent[2];
+    int child[2];
+    if (pipe(parent) < 0 || pipe(child) < 0) {
+        fprintf(2, "pipe err.\n");
         exit(1);
-    } else if (res == 0) {  //kid
-        close(p2c[PIPE_WRITE]);
-        close(c2p[PIPE_READ]);
-        read(p2c[PIPE_READ], &number, sizeof(number));
-        close(p2c[PIPE_READ]);
-        printf("<%d>: received ping\n", getpid());
-        write(c2p[PIPE_WRITE], &number, sizeof(number));
-        close(c2p[PIPE_WRITE]);
-    } else {
-        close(p2c[PIPE_READ]);
-        close(c2p[PIPE_WRITE]);
-        write(p2c[PIPE_WRITE], &number, sizeof(number));
-        close(p2c[PIPE_WRITE]);
-        read(c2p[PIPE_READ], &number, sizeof(number));
-        close(c2p[PIPE_READ]);
-        printf("<%d>: received pong\n", getpid());
     }
-    exit(0);
+
+    int res = fork();
+    if (res < 0) {
+        fprintf(2, "fork error.\n");
+        close(parent[Pread]);
+        close(parent[Pwrite]);
+        close(child[Pwrite]);
+        close(child[Pread]);
+        exit(1);
+    } else if (res == 0) {  //child
+        close(parent[Pwrite]);
+        close(child[Pread]);
+        char ch;
+        if (read(parent[Pread], &ch, sizeof(ch)) != sizeof(char)) {
+            exit(1);
+        } else {
+            fprintf(1, "%d: received p%cng\n", getpid(), ch);
+        }
+        close(parent[Pread]);
+        ch = 'o';
+        if (write(child[Pwrite], &ch, sizeof(ch)) != sizeof(char)) {
+            fprintf(2, "child write errpr!");
+            exit(1);
+        }
+        close(child[Pwrite]);
+        exit(0);
+    } else {
+        close(parent[Pread]);
+        close(child[Pwrite]);
+        char ch = 'i';
+
+        if (write(parent[Pwrite], &ch, sizeof(ch)) != sizeof(char)) {
+            fprintf(2, "parent write error!");
+            exit(1);
+        }
+        close(parent[Pwrite]);
+        if (read(child[Pread], &ch, sizeof(ch)) != sizeof(char)) {
+            fprintf(2, "parent reead error!");
+            exit(1);
+        } else {
+            fprintf(1, "%d: received p%cng\n", getpid(), ch);
+        }
+        close(child[Pread]);
+        exit(0);
+    }
 }
